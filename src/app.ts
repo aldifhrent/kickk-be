@@ -27,7 +27,7 @@ export class App {
     // this.app.use(express.urlencoded());
     this.app.use(
       cors({
-        origin: ["http://localhost:3000"],
+        origin: ["http://localhost:3000", "https://kickk-fe.vercel.app"],
       })
     );
   }
