@@ -29,7 +29,7 @@ export default class App {
   private configure(): void {
     this.app.use(
       cors({
-        origin: "http://localhost:3000",
+        origin: ["http://localhost:3000", "https://kickk-fe.vercel.app"],
         credentials: true,
       })
     );
