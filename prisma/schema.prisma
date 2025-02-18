@@ -1,0 +1,151 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  CUSTOMER
+  ORGANIZER
+}
+
+enum ReferralStatus {
+  PENDING
+  COMPLETED
+  EXPIRED
+}
+
+enum Ticket {
+  PAID
+  FREE
+}
+
+enum TransactionStatus {
+  WAITING_PAYMENT
+  WAITING_CONFIRMATION
+  DONE
+  REJECTED
+  EXPIRED
+  CANCELED
+}
+
+model User {
+  id            String  @id @default(uuid())
+  name          String
+  email         String  @unique
+  password      String
+  role          Role    @default(CUSTOMER)
+  imageUrl      String? @map("image_url")
+  pointsBalance Int     @default(0) @map("points_balance")
+  referralCode  String  @unique @default(uuid()) @map("referral_code")
+  referrerId    String? @map("referrer_id")
+  referrer      User?   @relation("UserReferrals", fields: [referrerId], references: [id], onDelete: SetNull)
+  referredUsers User[]  @relation("UserReferrals")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  organizerId String?    @map("organizer_id")
+  organizer   Organizer? @relation("UserOrganizer")
+
+  Events       Events[]
+  transactions Transaction[]
+  Review       Review[]
+
+  @@map("users")
+}
+
+model Organizer {
+  id             String  @id @default(uuid())
+  slug           String? @unique
+  userId         String  @unique @map("user_id")
+  user           User    @relation("UserOrganizer", fields: [userId], onDelete: Cascade, references: [id]) // Handle fields and onDelete here
+  organizerName  String  @unique @map("organizer_name")
+  aboutOrganizer String? @map("about_organizer")
+  website        String?
+  role           Role    @default(ORGANIZER)
+  logoUrl        String? @map("logo_url")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  Events Events[]
+  Review Review[]
+
+  @@map("organizers")
+}
+
+model Events {
+  id                    Int      @id @default(autoincrement())
+  slug                  String   @unique
+  title                 String
+  description           String   @db.Text
+  imageUrl              String?  @map("image_url")
+  registrationStartDate DateTime @map("registration_start_date")
+  registrationEndDate   DateTime @map("registration_end_date")
+  eventStartDate        DateTime @map("event_start_date")
+  eventEndDate          DateTime @map("event_end_date")
+  price                 Int
+  attendedEvent         Int      @map("attended_event")
+  totalTicket           Int      @map("total_ticket")
+
+  ticketType  Ticket   @map("ticket_type")
+  organizerId String   @map("organizer_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  organizer Organizer  @relation(fields: [organizerId], references: [id], onDelete: Cascade)
+  Category  Category[]
+
+  transactions Transaction[]
+  User         User?         @relation(fields: [userId], references: [id])
+  userId       String?
+  Review       Review[]
+
+  @@map("events")
+}
+
+model Transaction {
+  id           String            @id @default(uuid())
+  totalAmount  Int
+  pointsUsed   Int               @default(0)
+  status       TransactionStatus // Change from String to TransactionStatus
+  quantity     Int               @default(1) // Add quantity field
+  expiresAt    DateTime?
+  paymentProof String?
+  user         User              @relation(fields: [userId], references: [id])
+  userId       String
+  event        Events            @relation(fields: [eventId], references: [id])
+  eventId      Int
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+}
+
+model Category {
+  id   Int    @id @default(autoincrement())
+  name String
+
+  Event Events[]
+
+  @@map("categories")
+}
+
+model Review {
+  id          String   @id @default(uuid())
+  userId      String   @map("user_id")
+  eventId     Int      @map("event_id")
+  organizerId String   @map("organizer_id")
+  rating      Int
+  comment     String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  event     Events    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  organizer Organizer @relation(fields: [organizerId], references: [id], onDelete: Cascade)
+
+  @@map("reviews")
+}
